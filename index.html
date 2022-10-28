@@ -1,0 +1,196 @@
+<html>
+	<body onload="getEntries()">
+		<script>
+
+entries = {}
+
+function insertRow(entries)
+{
+	var table=document.getElementById('inputs');
+	var tbody = table.getElementsByTagName('tbody')[0];
+	var id = tbody.rows.length;
+	var row = tbody.insertRow(-1);
+	row.className = "item"
+	row.id = (Math.random() + 1).toString(36).substring(7);
+	var itemName = row.insertCell(0);
+	var itemPrice = row.insertCell(1);
+
+	itemName.innerHTML='<input onchange="trackEntries(this)" class="itemName" type="text"></input>';
+	itemPrice.innerHTML='&pound;<input onchange="trackEntries(this) "class="itemPrice" pattern="^\d+(?:\.\d{0,2})$" type="text"></input>';
+
+	if (entries && entries.length == 2) {
+		itemName.getElementsByClassName('itemName').item(0).value = entries[0]
+		itemPrice.getElementsByClassName('itemPrice').item(0).value = entries[1]
+	}
+}
+
+function getAllItemCombinations() {
+	var table=document.getElementById('inputs');
+	var itemRows = table.getElementsByTagName('tr');
+	var items = {};
+
+	for (var i = 1; i < itemRows.length; i++) {
+
+		var name  = itemRows[i].getElementsByClassName('itemName').item(0).value
+		var price = itemRows[i].getElementsByClassName('itemPrice').item(0).value
+		if (name && price) {
+			items[name] = price
+		}
+	}
+
+	return items;
+
+}
+
+function getPermutations(array, size) {
+
+    function p(t, i) {
+        if (t.length === size) {
+            result.push(t);
+            return;
+        }
+        if (i + 1 > array.length) {
+            return;
+        }
+        p(t.concat(array[i]), i + 1);
+        p(t, i + 1);
+    }
+
+    var result = [];
+    p([], 0);
+    return result;
+}
+
+function getAllPermutations(arr) {
+
+	rv = []
+	l = arr.length
+	while (l > 0) {
+		rv = getPermutations(arr, l).concat(rv)
+		l--
+	}
+
+	return rv
+}
+
+function calculate() {
+	resultDiv = document.getElementById('results')
+
+	items = getAllItemCombinations()
+
+	itemKeys = []
+
+	for (var k in items) {
+		itemKeys.push(k)
+	}
+
+	combos = getAllPermutations(itemKeys)
+	console.log(combos)
+
+	out = {}
+
+	expectedTotal = parseFloat(document.getElementById('expectedResult').value)
+
+	text = '<p>Value ' + expectedTotal + ' could be made through the following combinations:<\p><ul>'
+
+	for (var combo in combos) {
+		console.log(combos[combo])
+		comboPrice = 0
+		for (var item in combos[combo]) {
+			console.log(combos[combo][item] + ": " + items[combos[combo][item]])
+			comboPrice += parseFloat(items[combos[combo][item]])
+		}
+		out[comboPrice] = combos[combo]
+
+		console.log("Combo price: " + comboPrice)
+		console.log("Expected Total: " + expectedTotal)
+		if (expectedTotal == comboPrice) {
+			console.log("price matches")
+			text += "<li>" + combos[combo] + "</li>"
+		}
+	}
+
+	console.log(out)
+
+	resultDiv.innerHTML = text
+}
+
+function getCookie(name) {
+    // Split cookie string and get all individual name=value pairs in an array
+    var cookieArr = document.cookie.split(";");
+
+    // Loop through the array elements
+    for(var i = 0; i < cookieArr.length; i++) {
+        var cookiePair = cookieArr[i].split("=");
+
+        /* Removing whitespace at the beginning of the cookie name
+        and compare it with the given string */
+        if(name == cookiePair[0].trim()) {
+            // Decode the cookie value and return
+            return decodeURIComponent(cookiePair[1]);
+        }
+    }
+
+    // Return null if not found
+    return null;
+}
+
+function setCookie(name, value) {
+	let date = new Date();
+	date.setTime(date.getTime() + (365*24*60*60*1000));
+	expires = "expires="+date.toUTCString();
+	document.cookie = name + "=" + value + ";" + expires + ";path=/";
+}
+
+function getEntries() {
+	entries = JSON.parse(getCookie("entries"))
+	localEntries = Object.entries(entries)
+	console.log(entries)
+
+	for (var i = 0; i < localEntries.length; i++) {
+		insertRow(localEntries[i])
+	}
+}
+
+
+function trackEntries(el) {
+	row = el.parentElement.parentElement
+	console.log(el.className)
+
+	cookieArr = document.cookie.split(';')
+
+	if (el.className == 'itemName') {
+		console.log("NAME")
+		entries[el.value] = ""
+	} else if (el.className == 'itemPrice') {
+		console.log("PRICE")
+		name = row.getElementsByClassName('itemName').item(0).value
+		entries[name] = el.value
+	}
+
+	console.log(JSON.stringify(entries))
+	setCookie("entries", JSON.stringify(entries))
+}
+
+	</script>
+		<div >
+			<table id="inputs">
+				<tbody>
+					<tr>
+						<td>Item Name</td>
+						<td>Item Price</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<input id="rowAdder" type="button" onclick="insertRow()" value="Add Row" />
+		<br/>
+		<p>expected Total</p>
+		&pound;<input id="expectedResult" type=text value="0.00"/>
+		<input type="button" value="Calculate" onclick="calculate()"/>
+		<div id="results">
+			<ul id="comboList">
+			</ul>
+		</div>
+	</body>
+</html>
