@@ -52,25 +52,119 @@ function getPermutations(array, size) {
         if (i + 1 > array.length) {
             return;
         }
-        p(t.concat(array[i]), i + 1);
+        p(t.concat(array[i]), i);
         p(t, i + 1);
     }
 
     var result = [];
     p([], 0);
-    return result;
+
+    return result.filter((item, index) => result.indexOf(item) === index);
 }
 
-function getAllPermutations(arr) {
+function getAllPermutations(arr, len) {
+
 
 	rv = []
-	l = arr.length
-	while (l > 0) {
-		rv = getPermutations(arr, l).concat(rv)
-		l--
+	while (len > 0) {
+		rv = getPermutations(arr, len).concat(rv)
+		len--
 	}
 
+	console.log(rv)
 	return rv
+}
+
+DEBUG = false
+
+function debug(msg) {
+	if (DEBUG == true) {
+		console.log(msg)
+	}
+}
+
+function generatePricesForCombos(combos, expectedTotal) {
+	debug("generating prices for combos: " + JSON.stringify(combos))
+	out = []
+	var smallestItem = 100000
+	for (var [comboElement1, comboPrice1] of Object.entries(combos)) {
+		debug("elements: " + comboElement1)
+		debug("price: " +comboPrice1)
+		out.push({
+			"comboPrice": parseInt(comboPrice1),
+			"comboElements":  [ comboElement1 ]
+		})
+
+		if ( parseInt(comboPrice1) < smallestItem) {
+			smallestItem = parseInt(comboPrice1)
+		}
+	}
+
+	debug("Smallest value is " + smallestItem)
+
+
+	len = Math.ceil(expectedTotal/smallestItem)
+
+	allCombos = getAllPermutations(out, len)
+
+	debug("All Combos")
+	debug(allCombos)
+
+	prices = []
+
+	for (var c in allCombos) {
+		debug("C is: " + c)
+		debug("create empy combo")
+		debug("allcombos[c] = " + JSON.stringify(allCombos[c]))
+
+		x = comboUpdate(allCombos[c])
+
+		debug("Update prices")
+		debug(prices)
+		prices.push(x)
+	}
+
+	debug("final prices")
+	debug(prices)
+	return prices
+}
+
+
+function comboUpdate(combos) {
+	x = {
+		"comboPrice": 0,
+		"comboElements": []
+	}
+	for (var [index, combo] of Object.entries(combos)) {
+		price = combo["comboPrice"]
+		element = combo["comboElements"]
+		x["comboPrice"] += parseInt(price)
+		x["comboElements"] = x["comboElements"].concat(element)
+		debug("updated x with " + price + " and " + JSON.stringify(element))
+		debug(x)
+	}
+	return x
+}
+
+function comboStringify(elements) {
+	l = {}
+	for (var x in elements) {
+		if (l[elements[x]]) {
+			l[elements[x]] += 1
+		} else {
+			l[elements[x]] = 1
+		}
+	}
+
+	rv = []
+	for (var [elem, num] of Object.entries(l)) {
+		rv.push( + num + " x " + elem )
+	}
+	if (rv.length >1) {
+		return rv.slice(0,-1).join(", ") + " and " + rv.slice(-1)
+	} else {
+		return rv.slice(0)
+	}
 }
 
 function calculate() {
@@ -78,39 +172,26 @@ function calculate() {
 
 	items = getAllItemCombinations()
 
-	itemKeys = []
-
-	for (var k in items) {
-		itemKeys.push(k)
-	}
-
-	combos = getAllPermutations(itemKeys)
-	console.log(combos)
-
 	out = {}
 
 	expectedTotal = parseFloat(document.getElementById('expectedResult').value)
 
-	text = '<p>Value ' + expectedTotal + ' could be made through the following combinations:<\p><ul>'
+	text = '<p>A Stripe payment of &pound;' + expectedTotal + ' could be made through the following combinations:<\p><ul>'
 
-	for (var combo in combos) {
-		console.log(combos[combo])
-		comboPrice = 0
-		for (var item in combos[combo]) {
-			console.log(combos[combo][item] + ": " + items[combos[combo][item]])
-			comboPrice += parseFloat(items[combos[combo][item]])
-		}
-		out[comboPrice] = combos[combo]
 
-		console.log("Combo price: " + comboPrice)
-		console.log("Expected Total: " + expectedTotal)
-		if (expectedTotal == comboPrice) {
-			console.log("price matches")
-			text += "<li>" + combos[combo] + "</li>"
+	debug("Expected Total: " + expectedTotal)
+	out = generatePricesForCombos(items, expectedTotal)
+
+	debug(out)
+	for (var combo in out) {
+		debug(out[combo])
+		debug("Combo price: " + out[combo]["comboPrice"])
+		debug("Combo: " + out[combo]["comboElements"])
+		if (expectedTotal == out[combo]["comboPrice"]) {
+			debug("price matches")
+			text += "<li>" + comboStringify(out[combo]["comboElements"]) + "</li>"
 		}
 	}
-
-	console.log(out)
 
 	resultDiv.innerHTML = text
 }
@@ -144,8 +225,11 @@ function setCookie(name, value) {
 
 function getEntries() {
 	entries = JSON.parse(getCookie("entries"))
+	if (!entries) {
+		entries = {}
+	}
 	localEntries = Object.entries(entries)
-	console.log(entries)
+	debug(entries)
 
 	for (var i = 0; i < localEntries.length; i++) {
 		insertRow(localEntries[i])
@@ -155,25 +239,64 @@ function getEntries() {
 
 function trackEntries(el) {
 	row = el.parentElement.parentElement
-	console.log(el.className)
+	debug(el.className)
 
 	cookieArr = document.cookie.split(';')
 
 	if (el.className == 'itemName') {
-		console.log("NAME")
+		debug("NAME")
 		entries[el.value] = ""
 	} else if (el.className == 'itemPrice') {
-		console.log("PRICE")
+		debug("PRICE")
 		name = row.getElementsByClassName('itemName').item(0).value
 		entries[name] = el.value
 	}
 
-	console.log(JSON.stringify(entries))
+	debug(JSON.stringify(entries))
 	setCookie("entries", JSON.stringify(entries))
 }
 
 	</script>
-		<div >
+		<p>
+			<b>Cookie Warning</b>
+			All items are saved in a cookie so will be
+			saved and pre-populated next time you load this page.
+		</p>
+		<p>
+			Stripe payments are a bit awkward. If multiple payments
+			go in, they get merged into a single payment out. This
+			presents some difficulty in joining up sales invoices to
+			payments made.
+		</p>
+		<p>
+			This calculator is designed to simplify that process.
+		</p>
+		<p>
+			To use it:
+		</p>
+
+		<ol>
+			<li>
+				Click the "Add Row" button.
+				<ul><li>
+					You can do this as many times as you like.
+				</li></ul>
+			</li>
+			<li>
+				For each row added you can add both a meaningful name and a cost.
+				<ul><li>
+				You should add one row for each item a customer could have purchased.
+				</li></ul>
+			</li>
+			<li>
+				Enter the Stripe Payment amount.
+			</li>
+			<li>
+				Press "Calculate".
+			</li>
+		</ol>
+
+		<div>
 			<table id="inputs">
 				<tbody>
 					<tr>
@@ -185,7 +308,7 @@ function trackEntries(el) {
 		</div>
 		<input id="rowAdder" type="button" onclick="insertRow()" value="Add Row" />
 		<br/>
-		<p>expected Total</p>
+		<p>Stripe Payment</p>
 		&pound;<input id="expectedResult" type=text value="0.00"/>
 		<input type="button" value="Calculate" onclick="calculate()"/>
 		<div id="results">
