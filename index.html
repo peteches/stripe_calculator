@@ -14,14 +14,27 @@ function insertRow(entries)
 	row.id = (Math.random() + 1).toString(36).substring(7);
 	var itemName = row.insertCell(0);
 	var itemPrice = row.insertCell(1);
+	var removeRow = row.insertCell(2);
 
-	itemName.innerHTML='<input onchange="trackEntries(this)" class="itemName" type="text"></input>';
-	itemPrice.innerHTML='&pound;<input onchange="trackEntries(this) "class="itemPrice" pattern="^\d+(?:\.\d{0,2})$" type="text"></input>';
+	itemName.innerHTML='<input onchange="trackEntries(this)" class="itemName" type="float"></input>';
+	itemPrice.innerHTML='&pound;<input onchange="trackEntries(this) "class="itemPrice" pattern="^\d+(?:\.\d{0,2})$" type="float"></input>';
+	removeRow.innerHTML='<input type="button" onclick="removeRow(this)" value="&times;"/>'
 
 	if (entries && entries.length == 2) {
 		itemName.getElementsByClassName('itemName').item(0).value = entries[0]
 		itemPrice.getElementsByClassName('itemPrice').item(0).value = entries[1]
 	}
+}
+
+function removeRow(row) {
+	entries = JSON.parse(getCookie("entries"))
+	debug(entries)
+	entryName = row.parentElement.parentElement.getElementsByClassName('itemName').item(0).value
+	delete entries[entryName]
+	debug(entries)
+	setCookie("entries", JSON.stringify(entries))
+
+	row.parentElement.parentElement.remove()
 }
 
 function getAllItemCombinations() {
@@ -313,16 +326,34 @@ function trackEntries(el) {
 			<table id="inputs">
 				<tbody>
 					<tr>
-						<td>Item Name</td>
-						<td>Item Price</td>
+						<th>Item Name</th>
+						<th>Item Price</th>
 					</tr>
 				</tbody>
 			</table>
 		</div>
 		<input id="rowAdder" type="button" onclick="insertRow()" value="Add Row" />
 		<br/>
-		<p>Stripe Payment</p>
-		&pound;<input id="expectedResult" type=text value="0.00"/>
+		<table>
+			<tr>
+				<th>
+					Stripe Payment
+				</th>
+				<th>
+					Stripe Fee
+				</th>
+			</tr>
+			<tr>
+				<td>
+					&pound;<input id="expectedResult"
+					type="float" value="0.00"/>
+				</td>
+				<td>
+					&percnt;<input id="stripeFee"
+						type="float" value="0.0"/>
+				</td>
+			</tr>
+		</table>
 		<input type="button" value="Calculate" onclick="calculate()"/>
 		<div id="results">
 			<ul id="comboList">
