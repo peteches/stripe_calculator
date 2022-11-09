@@ -64,6 +64,7 @@ function getPermutations(array, size) {
 
 function getAllPermutations(arr, len) {
 
+	debug("getAllPermutations")
 
 	rv = []
 	while (len > 0) {
@@ -91,12 +92,12 @@ function generatePricesForCombos(combos, expectedTotal) {
 		debug("elements: " + comboElement1)
 		debug("price: " +comboPrice1)
 		out.push({
-			"comboPrice": parseInt(comboPrice1),
+			"comboPrice": parseFloat(comboPrice1),
 			"comboElements":  [ comboElement1 ]
 		})
 
-		if ( parseInt(comboPrice1) < smallestItem) {
-			smallestItem = parseInt(comboPrice1)
+		if ( parseFloat(comboPrice1) < smallestItem) {
+			smallestItem = parseFloat(comboPrice1)
 		}
 	}
 
@@ -138,7 +139,7 @@ function comboUpdate(combos) {
 	for (var [index, combo] of Object.entries(combos)) {
 		price = combo["comboPrice"]
 		element = combo["comboElements"]
-		x["comboPrice"] += parseInt(price)
+		x["comboPrice"] += parseFloat(price)
 		x["comboElements"] = x["comboElements"].concat(element)
 		debug("updated x with " + price + " and " + JSON.stringify(element))
 		debug(x)
@@ -158,7 +159,11 @@ function comboStringify(elements) {
 
 	rv = []
 	for (var [elem, num] of Object.entries(l)) {
-		rv.push( + num + " x " + elem )
+		var l = num + " x " + elem
+		if (num>1) {
+			l += "'s"
+		}
+		rv.push(l)
 	}
 	if (rv.length >1) {
 		return rv.slice(0,-1).join(", ") + " and " + rv.slice(-1)
@@ -182,6 +187,8 @@ function calculate() {
 	debug("Expected Total: " + expectedTotal)
 	out = generatePricesForCombos(items, expectedTotal)
 
+	matchingCombos = []
+
 	debug(out)
 	for (var combo in out) {
 		debug(out[combo])
@@ -189,8 +196,14 @@ function calculate() {
 		debug("Combo: " + out[combo]["comboElements"])
 		if (expectedTotal == out[combo]["comboPrice"]) {
 			debug("price matches")
-			text += "<li>" + comboStringify(out[combo]["comboElements"]) + "</li>"
+			matchingCombos.push( "<li>" + comboStringify(out[combo]["comboElements"]) + "</li>")
 		}
+	}
+
+	if (matchingCombos.length > 0) {
+		text += matchingCombos.join("") + "</ul>"
+	} else {
+		text = '<p>A Stripe payment of &pound;' + expectedTotal + ' cannot be made exactly through any combination of items.</p>'
 	}
 
 	resultDiv.innerHTML = text
