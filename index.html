@@ -192,26 +192,48 @@ function calculate() {
 
 	out = {}
 
-	expectedTotal = parseFloat(document.getElementById('expectedResult').value)
 
-	text = '<p>A Stripe payment of &pound;' + expectedTotal + ' could be made through the following combinations:<\p><ul>'
-
+	expectedTotal = parseFloat(document.getElementById('expectedResult').value).toLocaleString('en-GB',
+		{
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+		})
 
 	debug("Expected Total: " + expectedTotal)
 	out = generatePricesForCombos(items, expectedTotal)
 
 	matchingCombos = []
 
+	stripeFeePercent = document.getElementById("stripeFee").value
+	stripeFee = 0.00
+
 	debug(out)
 	for (var combo in out) {
 		debug(out[combo])
 		debug("Combo price: " + out[combo]["comboPrice"])
 		debug("Combo: " + out[combo]["comboElements"])
-		if (expectedTotal == out[combo]["comboPrice"]) {
+		stripeFeeIter =
+			(out[combo]["comboPrice"]*(stripeFeePercent/100)).toLocaleString('en-GB',
+		{
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+		})
+
+		comboMinusFee = out[combo]["comboPrice"] - stripeFeeIter
+		debug("Expected: " + expectedTotal)
+		debug("Price: " + out[combo]["comboPrice"])
+		debug("Price Minus Fee: " + comboMinusFee)
+		if (expectedTotal == comboMinusFee) {
+			stripeFee = stripeFeeIter
+			debug("Combo Price: " + out[combo]["comboPrice"])
+			debug("Combo Price minus fee: " + comboMinusFee)
 			debug("price matches")
 			matchingCombos.push( "<li>" + comboStringify(out[combo]["comboElements"]) + "</li>")
 		}
 	}
+
+	text = '<p>Stripe should have Taken: &pound;' +stripeFee + '</p>'
+	text += '<p>A Stripe payment of &pound;' + expectedTotal + ' could be made through the following combinations:<\p><ul>'
 
 	if (matchingCombos.length > 0) {
 		text += matchingCombos.join("") + "</ul>"
@@ -260,6 +282,13 @@ function getEntries() {
 	for (var i = 0; i < localEntries.length; i++) {
 		insertRow(localEntries[i])
 	}
+
+	stripeFee = getCookie("stripeFee")
+	document.getElementById("stripeFee").value = stripeFee
+}
+
+function saveFee(el) {
+	setCookie("stripeFee", el.value)
 }
 
 
@@ -350,6 +379,7 @@ function trackEntries(el) {
 				</td>
 				<td>
 					&percnt;<input id="stripeFee"
+						onchange="saveFee(this)"
 						type="float" value="0.0"/>
 				</td>
 			</tr>
